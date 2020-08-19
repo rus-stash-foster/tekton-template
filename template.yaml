@@ -44,7 +44,7 @@ spec:
         - /kaniko/executor
         - --dockerfile=Dockerfile
         - --context=/workspace/repo/
-        - --destination=${ECR_REPO}/stash-${PROJECTNAME}-release:latest
+        - --destination=${ECR_URL}
         - --verbosity=debug
       securityContext:
         runAsUser: 0
