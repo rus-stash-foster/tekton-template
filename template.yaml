@@ -1,0 +1,91 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: repo
+spec:
+  type: git
+  params:
+    - name: url
+      value: ${GITURL}
+    - name: revision
+      value: ${GITBRANCH}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/ssh-auth
+metadata:
+  name: ${PROJECTNAME}-github-ssh-key
+  annotations:
+    tekton.dev/git-0: github.com
+data:
+  ssh-privatekey: ${SSH_KEY}
+  known_hosts: Z2l0aHViLmNvbSwxNDAuODIuMTE0LjQgc3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBQkl3QUFBUUVBcTJBN2hSR21kbm05dFVEYk85SURTd0JLNlRiUWErUFhZUENQeTZyYlRyVHR3N1BIa2NjS3JwcDB5VmhwNUhkRUljS3I2cExsVkRCZk9MWDlRVXN5Q09WMHd6ZmpJSk5sR0VZc2RsTEppekhoYm4ybVVqdlNBSFFxWkVUWVA4MWVGekxRTm5QSHQ0RVZWVWg3VmZERVNVODRLZXptRDVRbFdwWExtdlUzMS95TWYrU2U4eGhIVHZLU0NaSUZJbVd3b0c2bWJVb1dmOW56cElvYVNqQit3ZXFxVVVtcGFhYXNYVmFsNzJKK1VYMkIrMlJQVzNSY1QwZU96UWdxbEpMM1JLclRKdmRzakUzSkVBdkdxM2xHSFNaWHkyOEczc2t1YTJTbVZpL3c0eUNFNmdiT0RxblRXbGc3K3dDNjA0eWRHWEE4VkppUzVhcDQzSlhpVUZGQWFRPT0K
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${PROJECTNAME}-github-build-bot
+secrets:
+  - name: ${PROJECTNAME}-github-ssh-key
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: task-${PROJECTNAME}-build-and-push
+spec:
+  resources:
+    inputs:
+      - name: repo
+        type: git
+  steps:
+    - name: ${PROJECTNAME}-build-and-push
+      image: gcr.io/kaniko-project/executor:latest
+      command:
+        - /kaniko/executor
+        - --dockerfile=Dockerfile
+        - --context=/workspace/repo/
+        - --destination=${ECR_REPO}/stash-${PROJECTNAME}-release:latest
+        - --verbosity=debug
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker/
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ${PROJECTNAME}-pipeline
+spec:
+  resources:
+    - name: repo
+      type: git
+  tasks:
+    - name: generate-image
+      taskRef:
+        name: task-${PROJECTNAME}-build-and-push
+      resources:
+        inputs:
+          - name: repo
+            resource: repo  
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: ${PROJECTNAME}-pipeline-run
+spec:
+  pipelineRef:
+     name: ${PROJECTNAME}-pipeline
+  resources:
+    - name: repo
+      resourceRef:
+        name: repo
+  serviceAccountName: ${PROJECTNAME}-github-build-bot
+  podTemplate:
+    nodeSelector:
+      role: tekton
+    volumes:
+      - name: docker-config
+        configMap:
+          name: docker-config  
+

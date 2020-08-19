@@ -1,0 +1,5 @@
+PROJECTNAME="testproject"
+GITURL="http://github.com/something"
+GITBRANCH="master"
+SSH_KEY="base64_key"
+ECR_REPO="something.dkr.ecr.us-east-2.amazonaws.com"
