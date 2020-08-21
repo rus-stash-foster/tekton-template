@@ -1,9 +1,9 @@
 PROJECTNAME="testproject"
-GITURL="http://github.com/something"
+GITURL="http://github.com/something" # Can also be git@github
 GITBRANCH="master"
 SSH_KEY="base64_key"
-ECR_TAG="latest"
-ECR_NAME="test"
 ECR_REPO="something.dkr.ecr.us-east-2.amazonaws.com"
+ECR_TAG="latest"
+ECR_NAME="test" 
 ECR_URL="${ECR_REPO}/${ECR_NAME}:${ECR_TAG}"
 NAMESPACE="tekton-jobs-${PROJECTNAME}-pipeline"
